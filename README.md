@@ -73,6 +73,11 @@ Run the development server:
 bun dev
 ```
 
+Set the following in `.env.local` to visualize local lerobot data:
+```bash
+LOCAL_DATASETS_PATH=YOUR_DATASET_PATH
+```
+
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing the page by modifying `src/app/page.tsx` or other files in the `src/` directory. The app supports hot-reloading for rapid development.

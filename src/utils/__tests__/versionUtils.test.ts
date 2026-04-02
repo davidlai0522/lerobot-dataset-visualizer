@@ -1,5 +1,9 @@
 import { describe, expect, test, mock, afterEach } from "bun:test";
-import { buildVersionedUrl } from "@/utils/versionUtils";
+import {
+  buildVersionedUrl,
+  LOCAL_ORG,
+  isLocalDataset,
+} from "@/utils/versionUtils";
 
 // ---------------------------------------------------------------------------
 // buildVersionedUrl — pure function, no mocking needed
@@ -54,6 +58,54 @@ describe("buildVersionedUrl", () => {
     expect(url).toBe(
       "https://huggingface.co/datasets/myorg/mydataset/resolve/main/meta/info.json",
     );
+  });
+
+  test("builds local API URL for __local__ org (data file)", () => {
+    const url = buildVersionedUrl(
+      `${LOCAL_ORG}/my_robot_data`,
+      "v2.0",
+      "data/000/episode_000000.parquet",
+    );
+    // In test environment (no window), falls back to http://localhost:3000
+    expect(url).toBe(
+      "http://localhost:3000/api/local-files/my_robot_data/data/000/episode_000000.parquet",
+    );
+  });
+
+  test("builds local API URL for __local__ org (video file)", () => {
+    const url = buildVersionedUrl(
+      `${LOCAL_ORG}/my_dataset`,
+      "v3.0",
+      "videos/observation.images.top/chunk-000/file-000.mp4",
+    );
+    expect(url).toBe(
+      "http://localhost:3000/api/local-files/my_dataset/videos/observation.images.top/chunk-000/file-000.mp4",
+    );
+  });
+
+  test("builds local API URL for __local__ org (meta/info.json)", () => {
+    const url = buildVersionedUrl(
+      `${LOCAL_ORG}/my_dataset`,
+      "v3.0",
+      "meta/info.json",
+    );
+    expect(url).toBe(
+      "http://localhost:3000/api/local-files/my_dataset/meta/info.json",
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isLocalDataset
+// ---------------------------------------------------------------------------
+describe("isLocalDataset", () => {
+  test("returns true for __local__ org prefix", () => {
+    expect(isLocalDataset(`${LOCAL_ORG}/my_dataset`)).toBe(true);
+  });
+
+  test("returns false for huggingface repoIds", () => {
+    expect(isLocalDataset("lerobot/pusht")).toBe(false);
+    expect(isLocalDataset("org/dataset")).toBe(false);
   });
 });
 

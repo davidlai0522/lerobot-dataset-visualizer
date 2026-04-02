@@ -6,6 +6,37 @@ const DATASET_URL =
   process.env.DATASET_URL || "https://huggingface.co/datasets";
 
 /**
+ * Sentinel org name used in routes to identify locally-served datasets.
+ * URL pattern: /__local__/{datasetName}/episode_{N}
+ */
+export const LOCAL_ORG = "__local__";
+
+/**
+ * Returns the base URL for the local-files API endpoint.
+ * On the server (no `window`), an absolute URL is required for fetch().
+ * On the client, a relative path is sufficient.
+ */
+function getLocalApiBase(): string {
+  if (typeof window === "undefined") {
+    // Server-side: prefer explicit env var, fall back to localhost:3000
+    return (
+      process.env.NEXTAUTH_URL ??
+      process.env.NEXT_PUBLIC_BASE_URL ??
+      "http://localhost:3000"
+    );
+  }
+  return "";
+}
+
+export function isLocalDataset(repoId: string): boolean {
+  return repoId.startsWith(`${LOCAL_ORG}/`);
+}
+
+function localDatasetName(repoId: string): string {
+  return repoId.slice(LOCAL_ORG.length + 1);
+}
+
+/**
  * Dataset information structure from info.json
  */
 type FeatureInfo = {
@@ -73,7 +104,9 @@ export async function getDatasetInfo(repoId: string): Promise<DatasetInfo> {
   console.log(`[perf] getDatasetInfo cache MISS for ${repoId} — fetching`);
 
   try {
-    const testUrl = `${DATASET_URL}/${repoId}/resolve/main/meta/info.json`;
+    const testUrl = isLocalDataset(repoId)
+      ? `${getLocalApiBase()}/api/local-files/${localDatasetName(repoId)}/meta/info.json`
+      : `${DATASET_URL}/${repoId}/resolve/main/meta/info.json`;
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -149,5 +182,8 @@ export function buildVersionedUrl(
   version: string,
   path: string,
 ): string {
+  if (isLocalDataset(repoId)) {
+    return `${getLocalApiBase()}/api/local-files/${localDatasetName(repoId)}/${path}`;
+  }
   return `${DATASET_URL}/${repoId}/resolve/main/${path}`;
 }
